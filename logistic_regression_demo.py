@@ -5,6 +5,7 @@ Preprocess audio files for logistic regression.
 
 Needs the "data" folder from Prof. Trilce's "Google Drive > Projects > Project 2 > data"
 
+************** Output at bottom ****
 '''
 
 import numpy as np
@@ -42,8 +43,10 @@ just_two_folders = [
     "classical"
 ]
 
-#folders = all_folders
-folders = just_two_folders
+
+folders = all_folders
+print("if time is an issue, set variable folders=just_two_folders")
+#folders = just_two_folders
 
 
     
@@ -84,6 +87,8 @@ Preprocess audio folders.
 
 There are 10 folders. Each folder has 90 audio files.
 '''
+print("extracting coefficients from audio file...")
+
 for c in folders:
     folder_dir = os.path.join(dir, c) 
     
@@ -95,10 +100,6 @@ for c in folders:
     Find audio files for folder k. 
     '''
     files_in_folder = librosa.util.find_files(folder_dir, ext='au', recurse=False)
-    
-    '''
-    MFCCs
-    '''
 
     mfcc_lengths = []
 
@@ -117,6 +118,9 @@ for c in folders:
 #    print("min mfcc length: ", pd.Series(mfcc_lengths).min())
 #    print("max mfcc length: ", pd.Series(mfcc_lengths).max())
 
+
+print('X is the coefficients matrix from audio file in folder')
+print('Y is the audio folder (blues, classical, country')
 '''
 Truncate X because some audio files are longer than others.
 '''
@@ -138,6 +142,7 @@ print("Y's size is ", Y.shape)
 Standardize each column in X. 
 '''
 X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+print(X)
 
 '''
 Convert labels ("blues", "classical", ...) to binary arrays.
@@ -250,3 +255,77 @@ def logistic_regression(X : pd.DataFrame, Y : pd.Series):
 #########################################################
 '''
 
+
+
+# all_folders
+'''
+
+if time is an issue, set variable folders=just_two_folders
+extracting coefficients from audio file...
+::::::::::::::: blues :::::::::::::::
+blues has 90 .au files
+::::::::::::::: classical :::::::::::::::
+classical has 90 .au files
+::::::::::::::: country :::::::::::::::
+country has 90 .au files
+::::::::::::::: disco :::::::::::::::
+disco has 90 .au files
+::::::::::::::: hiphop :::::::::::::::
+hiphop has 90 .au files
+::::::::::::::: jazz :::::::::::::::
+jazz has 90 .au files
+::::::::::::::: metal :::::::::::::::
+metal has 90 .au files
+::::::::::::::: pop :::::::::::::::
+pop has 90 .au files
+::::::::::::::: reggae :::::::::::::::
+reggae has 90 .au files
+::::::::::::::: rock :::::::::::::::
+rock has 90 .au files
+X is the coefficients matrix from audio file in folder
+Y is the audio folder (blues, classical, country
+X's size is  (900, 1290)
+Y's size is  (900,)
+[[ 1.4668637e-03 -3.8113907e-02  9.5596351e-03 ...  2.8269383e-01
+   2.1083282e-01  2.2434103e-01]
+ [-4.3218166e-01  1.8818676e-01  1.0549458e+00 ...  8.3892208e-01
+   9.2070884e-01  1.0053785e+00]
+ [ 3.7053797e-01  2.0519267e-01  1.8060875e-01 ...  6.3767773e-01
+   7.5352615e-01  8.1290799e-01]
+ ...
+ [ 8.9658087e-01  7.6986706e-01  6.7155725e-01 ...  4.8403674e-01
+   3.9009428e-01  3.7656170e-01]
+ [-2.3531650e-01 -8.4036820e-02 -4.6797141e-02 ... -8.9093977e-01
+  -1.6940556e-01  3.6492574e-01]
+ [-1.2876230e+00 -1.5448823e+00 -1.5353658e+00 ... -2.5888512e-02
+   1.5623225e-01  9.3924932e-02]]
+X's shape (900, 1290)
+Y's shape (900, 10)
+SVC accuracy: 0.22777777777777777
+Gaussian Naive Bayes accuracy: 0.24444444444444444
+RandomForest accuracy: 0.3111111111111111
+'''
+
+# just_two_folders
+'''
+
+
+::::::::::::::: blues :::::::::::::::
+blues has 90 .au files
+blues has 90 mfccs
+min mfcc length:  1293
+max mfcc length:  1293
+::::::::::::::: classical :::::::::::::::
+classical has 90 .au files
+classical has 90 mfccs
+min mfcc length:  1292
+max mfcc length:  1314
+X's size is  (180, 1292)
+Y's size is  (180,)
+X's shape (180, 1292)
+Y's shape (180, 2)
+SVC accuracy: 0.6388888888888888
+Gaussian Naive Bayes accuracy: 0.8888888888888888
+RandomForest accuracy: 0.8888888888888888
+
+'''
