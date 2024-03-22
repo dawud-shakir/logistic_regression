@@ -3,8 +3,6 @@ Machine Learning
 
 Preprocess audio files for logistic regression.
 
-Needs the "data" folder from Prof. Trilce's "Google Drive > Projects > Project 2 > data"
-
 ************** Output at bottom ****
 '''
 
@@ -21,6 +19,8 @@ import librosa
 
 from sklearn.preprocessing import OneHotEncoder
 
+rows = 0
+cols = 1
 
 '''
 These folders are our classes. 
@@ -45,35 +45,31 @@ just_two_folders = [
 
 
 folders = all_folders
-print("if time is an issue, set variable folders=just_two_folders")
+print("if time is an issue, set folders=just_two_folders")
 #folders = just_two_folders
 
 
+'''
+This chapter preprocesses the audio files.
+'''
     
 '''
 Extract coefficients from audio file.
 
 Return a 1-d array. 
-
-Each column in the 1-d array is the mean of coefficients at that time step. 
-
-
-n_coefficients: number of coefficients 
-
-n_samples_in_frame: number of samples in a frame (hop length)
-
-frame_length: the length of each frame (win_length) 
-
 '''
 
-def read_audio_file_mfcc(path, n_coefficients=40, n_samples_in_frame=512, frame_length=None) -> np.array:
+def read_audio_file_mfcc(path) -> np.array:
 
     y, sr = librosa.load(path)
 
-    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_coefficients, hop_length=n_samples_in_frame, win_length=frame_length)
+    # mfcc_matrix 
+    mfcc_matrix = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40, hop_length=512, win_length=None)
+    
 
-    # mean of rows
-    return np.mean(mfccs, axis=0)   
+    # mean of cols
+    cols = 1
+    return np.mean(mfcc_matrix, axis=cols)    
 
     
 #dir = os.getcwd() + "/data/test/"
@@ -89,11 +85,11 @@ There are 10 folders. Each folder has 90 audio files.
 '''
 print("extracting coefficients from audio file...")
 
-for c in folders:
-    folder_dir = os.path.join(dir, c) 
+for folder in folders:
+    folder_dir = os.path.join(dir, folder) 
     
     if not os.path.isdir(folder_dir):
-        exit(f"{dir} missing folder \"{c}\"")
+        exit(f"{dir} missing folder \"{folder}\"")
 
 
     '''
@@ -101,65 +97,82 @@ for c in folders:
     '''
     files_in_folder = librosa.util.find_files(folder_dir, ext='au', recurse=False)
 
-    mfcc_lengths = []
-
     for i in range(len(files_in_folder)):
-        mfccs = read_audio_file_mfcc(files_in_folder[i])
+        coefficients = read_audio_file_mfcc(files_in_folder[i])
 
-        X.append(mfccs)
-        Y.append(c)
+        X.append(coefficients)
+        Y.append(folder)
     
-        mfcc_lengths.append(len(mfccs))
-    
-    print(":"*15, c, 15*":")
-    print(c, "has", len(files_in_folder), ".au files")
-    
-#    print(c, "has", len(mfcc_lengths), "mfccs")
-#    print("min mfcc length: ", pd.Series(mfcc_lengths).min())
-#    print("max mfcc length: ", pd.Series(mfcc_lengths).max())
+
+    print(":"*15, folder, 15*":")
+    print(folder, "has", len(files_in_folder), ".au files")
 
 
 print('X is the coefficients matrix from audio file in folder')
 print('Y is the audio folder (blues, classical, country')
-'''
-Truncate X because some audio files are longer than others.
-'''
-column_lengths = [len(row) for row in X]
-min_length = np.min(column_lengths) 
-for i in range(len(X)):
-    X[i] = X[i][0:min_length]
 
+print("X=", pd.DataFrame(X))
+print("Y=", pd.DataFrame(Y))
 
-
-X = np.array(X)
-Y = np.array(Y)
-
-print("X's size is ", X.shape)
-print("Y's size is ", Y.shape)
+print("X's size is ", len(X), " by ", len(X[0]))
+print("Y's size is ", len(Y))
 
 
 '''
-Standardize each column in X. 
+Standardize
 '''
-X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
-print(X)
+
+X = (X - np.mean(X, axis=rows)) / np.std(X, axis=rows)
+
+   
+
 
 '''
-Convert labels ("blues", "classical", ...) to binary arrays.
+One Hop Encoding 
 '''
+# Skip for now
+#Y_one_column = Y
+#Y = OneHotEncoder().fit_transform(Y.reshape(-1,1))
+#Y = Y.toarray()
+
+
+#exit("done with preprocessing")
+
+
+'''
+Chapter II ... find P(Y_k | X_k, W_k)
+
+class handout
+X = samples
+Y = observations 
+
+
+
+W = ((X**2)-np.mean(X)^2) / np.std(X)**2
+
+X = (X - np.mean(X, axis=rows)) / np.std(X, axis=rows)
+X[:,0] = 1
+
+print(pd.DataFrame(X))
+
+
+    
+c = 1
+for k in np.unique(Y):
+    Y[Y==k] = c
+    c += 1
+
+argmax = -1
+for k in range(len(folders)):
+    pass    
+'''
+
+'''
+Chapter IV. Our logistic regression model versus sklean
+'''
+
 Y_one_column = Y
-Y = OneHotEncoder().fit_transform(Y.reshape(-1,1))
-Y = Y.toarray()
 
-print("X's shape", X.shape)
-print("Y's shape", Y.shape)
-
-
-
-
-'''
-This chapter will compare our Logistic Model's accuracy to sklean's SVC/GaussianNB/RandomForest 
-'''
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -214,53 +227,15 @@ Y_pred = clf.predict(X_test)
 accuracy = accuracy_score(Y_test, Y_pred)
 print("RandomForest accuracy:", accuracy)
 
-exit()
 
 
-'''
-Works for boolean logical regression (Y <- {0,1}) 
 
-def logistic_regression(X : pd.DataFrame, Y : pd.Series):
-    N = len(X.columns)
-
-    # array of N + 1 zeros for weights
-    weights = [0] * (N + 1)
-
-    Y_0 = sum(Y == 0) / len(Y)  # P(Y = 0)
-    Y_1 = sum(Y == 1) / len(Y)  # P(Y = 1)
-
-    weights[0] = np.log(Y_0 / Y_1)  # bias (intercept) weight
-
-    # bias weights with mean and std of columns
-
-    for i,col in enumerate(X.columns):
-        weights[0] += (X[col][Y == 0].mean()**2 - X[col][Y == 1].mean()**2) / (2 * X[col].std()**2)
-
-        weights[i + 1] = (X[col][Y == 0].mean() - X[col][Y == 1].mean()) / X[col].std()**2
-
-    #print("weights=", weights)
-
-    # linear combination Z = W0 + W1*X[0] + W2*X[1] + ...  
-
-    Z = weights[0]  # intercept
-
-    for i, col in enumerate(X.columns):
-        Z += weights[i + 1] * X[col]
-
-    expected_value_when_Y_1 = 1 / (1 + np.exp(-Z))
-
-    X.index = expected_value_when_Y_1
-    print(X)
-
-#########################################################
-'''
 
 
 
 # all_folders
 '''
-
-if time is an issue, set variable folders=just_two_folders
+if time is an issue, set folders=just_two_folders
 extracting coefficients from audio file...
 ::::::::::::::: blues :::::::::::::::
 blues has 90 .au files
@@ -284,48 +259,37 @@ reggae has 90 .au files
 rock has 90 .au files
 X is the coefficients matrix from audio file in folder
 Y is the audio folder (blues, classical, country
-X's size is  (900, 1290)
-Y's size is  (900,)
-[[ 1.4668637e-03 -3.8113907e-02  9.5596351e-03 ...  2.8269383e-01
-   2.1083282e-01  2.2434103e-01]
- [-4.3218166e-01  1.8818676e-01  1.0549458e+00 ...  8.3892208e-01
-   9.2070884e-01  1.0053785e+00]
- [ 3.7053797e-01  2.0519267e-01  1.8060875e-01 ...  6.3767773e-01
-   7.5352615e-01  8.1290799e-01]
- ...
- [ 8.9658087e-01  7.6986706e-01  6.7155725e-01 ...  4.8403674e-01
-   3.9009428e-01  3.7656170e-01]
- [-2.3531650e-01 -8.4036820e-02 -4.6797141e-02 ... -8.9093977e-01
-  -1.6940556e-01  3.6492574e-01]
- [-1.2876230e+00 -1.5448823e+00 -1.5353658e+00 ... -2.5888512e-02
-   1.5623225e-01  9.3924932e-02]]
-X's shape (900, 1290)
-Y's shape (900, 10)
-SVC accuracy: 0.22777777777777777
-Gaussian Naive Bayes accuracy: 0.24444444444444444
-RandomForest accuracy: 0.3111111111111111
-'''
+X=              0           1          2          3          4          5          6   ...        33        34        35        36        37        38        39
+0   -113.598824  121.570671 -19.162262  42.363941  -6.362266  18.621931 -13.699734  ... -2.999698  4.476317 -0.476855  6.006285 -0.059690 -3.458585 -1.841832
+1   -207.523834  123.985138   8.947020  35.867149   2.909594  21.519472  -8.556513  ... -2.451906  5.834808  3.544988  4.897320 -0.415597 -1.995414 -0.465218
+2    -90.757164  140.440872 -29.084547  31.686693 -13.976547  25.753752 -13.664991  ...  0.493469  0.447271 -4.162672 -4.815749 -6.703234 -4.425333 -0.981519
+3   -199.575134  150.086105   5.663404  26.855278   1.770071  14.232647  -4.827845  ... -3.845604 -2.524410 -4.935610 -5.954977 -6.616996 -6.396001 -1.501189
+4   -160.354172  126.209480 -35.581394  22.139256 -32.473549  10.850701 -23.350071  ... -6.110803 -6.951970 -4.070553 -1.137216 -0.491605 -4.786619 -3.221128
+..          ...         ...        ...        ...        ...        ...        ...  ...       ...       ...       ...       ...       ...       ...       ...
+895 -185.500031   98.925781 -36.442879  44.427540 -17.759830  21.284361 -20.293684  ... -3.955510 -3.703457 -6.930363 -1.700546 -2.314521  0.727262  2.184963
+896 -160.157043   88.741447 -35.476883  47.494301 -12.603620  17.301561 -19.144144  ... -2.667592 -2.553800 -2.767049 -1.134696 -2.076545  0.316649 -2.790205
+897  -42.662823  102.988686 -36.877899  44.516605 -11.996202  25.576914 -22.668953  ...  1.308880  3.513731 -3.199157 -1.240945 -2.604901 -4.466717 -2.298241
+898 -117.974052   84.058403 -50.267879  46.049637 -17.698416  20.855793 -21.641119  ... -2.901361 -1.249006 -3.046344 -1.682882 -2.913632 -0.135997 -0.648021
+899 -156.298126  130.789597 -25.229616  43.485470 -12.138994  25.392202  -7.940168  ... -0.646797 -0.067076  0.996034  0.362248 -4.546776 -4.545654 -3.438572
 
-# just_two_folders
-'''
+[900 rows x 40 columns]
+Y=          0
+0    blues
+1    blues
+2    blues
+3    blues
+4    blues
+..     ...
+895   rock
+896   rock
+897   rock
+898   rock
+899   rock
 
-
-::::::::::::::: blues :::::::::::::::
-blues has 90 .au files
-blues has 90 mfccs
-min mfcc length:  1293
-max mfcc length:  1293
-::::::::::::::: classical :::::::::::::::
-classical has 90 .au files
-classical has 90 mfccs
-min mfcc length:  1292
-max mfcc length:  1314
-X's size is  (180, 1292)
-Y's size is  (180,)
-X's shape (180, 1292)
-Y's shape (180, 2)
-SVC accuracy: 0.6388888888888888
-Gaussian Naive Bayes accuracy: 0.8888888888888888
-RandomForest accuracy: 0.8888888888888888
-
+[900 rows x 1 columns]
+X's size is  900  by  40
+Y's size is  900
+SVC accuracy: 0.5166666666666667
+Gaussian Naive Bayes accuracy: 0.4
+RandomForest accuracy: 0.5333333333333333
 '''
