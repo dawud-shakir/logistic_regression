@@ -17,6 +17,7 @@ import os
 '''
 import librosa
 
+
 from sklearn.preprocessing import OneHotEncoder
 
 rows = 0
@@ -45,7 +46,7 @@ just_two_folders = [
 
 
 folders = all_folders
-print("if time is an issue, set folders=just_two_folders")
+print("if time is an issue, set folders=just_two_folders", "\n\n")
 #folders = just_two_folders
 
 
@@ -59,12 +60,13 @@ Extract coefficients from audio file.
 Return a 1-d array. 
 '''
 
+num_coefficients = 40
 def read_audio_file_mfcc(path) -> np.array:
 
     y, sr = librosa.load(path)
 
     # mfcc_matrix 
-    mfcc_matrix = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40, hop_length=512, win_length=None)
+    mfcc_matrix = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=num_coefficients, hop_length=512, win_length=None)
     
 
     # mean of cols
@@ -83,7 +85,7 @@ Preprocess audio folders.
 
 There are 10 folders. Each folder has 90 audio files.
 '''
-print("extracting coefficients from audio file...")
+print("extracting", num_coefficients, "coefficients from each audio file...")
 
 for folder in folders:
     folder_dir = os.path.join(dir, folder) 
@@ -97,46 +99,66 @@ for folder in folders:
     '''
     files_in_folder = librosa.util.find_files(folder_dir, ext='au', recurse=False)
 
+    
+    
     for i in range(len(files_in_folder)):
         coefficients = read_audio_file_mfcc(files_in_folder[i])
-
+    
         X.append(coefficients)
+            
         Y.append(folder)
     
 
     print(":"*15, folder, 15*":")
     print(folder, "has", len(files_in_folder), ".au files")
+    print(folder, "has", len(files_in_folder), "x", len(X[0]), "coefficients")
 
 
-print('X is the coefficients matrix from audio file in folder')
-print('Y is the audio folder (blues, classical, country')
+print()
 
-print("X=", pd.DataFrame(X))
-print("Y=", pd.DataFrame(Y))
+print(len(X) * len(X[0]), "total coefficients loaded from audio files")
+
+
+print(pd.DataFrame(X))
+
+print(len(Y), "class labels ('blues', 'classical', 'country', ...) ")
+
+print(pd.DataFrame(Y))
+
 
 print("X's size is ", len(X), " by ", len(X[0]))
 print("Y's size is ", len(Y))
 
-
 '''
 Standardize
 '''
-
 X = (X - np.mean(X, axis=rows)) / np.std(X, axis=rows)
 
-   
+print("standardized X", pd.DataFrame(X))
 
 
 '''
 One Hop Encoding 
 '''
-# Skip for now
-#Y_one_column = Y
-#Y = OneHotEncoder().fit_transform(Y.reshape(-1,1))
-#Y = Y.toarray()
+
+'''
+Y_one_hop_encoded = np.array(Y)
+Y_one_hop_encoded = OneHotEncoder().fit_transform(Y_one_hop_encoded.reshape(-1,1))
+Y_one_hop_encoded = Y_one_hop_encoded.toarray()
+
+print("one hop encoded Y", pd.DataFrame(Y_one_hop_encoded))
+'''
 
 
-#exit("done with preprocessing")
+
+
+# parameters ready to go!
+
+X = np.array(X)
+Y = np.array(Y) 
+
+
+
 
 
 '''
