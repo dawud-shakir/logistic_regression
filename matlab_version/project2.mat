@@ -1,0 +1,255 @@
+% project 2 (matlab) todo: python version 
+
+% in matlab
+rows = 1
+cols = 2    
+
+
+
+%clc;
+clearvars;
+close all;
+
+
+rng(0); % random seed
+
+% hyper-parameters with example values
+
+regularization = 0.01
+% alpha = 0.001
+
+error_tolerance = 0.001 % .1, .5, .01, .001
+
+learning_rate = 0.001 % .1, .5, .01, .001
+
+% epochs
+iterations = 10000  % 5000, 10000, 20000
+
+%num_coefficients = 13
+
+% load data
+df = readtable('mfcc_13_ids.csv');
+
+% split data into features (X) and labels (Y)
+X = table2array(df(:, 1:13));
+Y = table2array(df(:, 14));
+
+
+
+% standardize features
+X = (X-mean(X)) ./ std(X);  % X = zscore(X)
+plot_zscores(X,Y);
+
+
+
+
+%%% parameters %%%
+
+K = numel(unique(Y)); % number of classes
+N = size(X, 2); % number of features
+M = size(X, 1); % number of samples
+
+% initialize weights randomly
+W = rand(K, N+1);       % 
+%W = .5*ones(K, N+1);   
+
+
+
+% split data into training and testing sets
+train_ratio = 0.8; 
+train_split = round(train_ratio * size(X, 1));
+test_split = size(X, 1) - train_split;
+
+% random indices
+% without replacement
+all_samples = randperm(M);
+
+% with replacement
+%all_samples = randi(M);
+
+train_indices = all_samples(1:train_split);
+test_indices = all_samples(train_split+1:end);
+
+X_train = X(train_indices, :);
+Y_train = Y(train_indices, :);
+
+X_test = X(test_indices, :);
+Y_test = Y(test_indices, :);
+
+% add bias (intercept)
+X_train = [ones(size(X_train, 1), 1) X_train];
+X_test = [ones(size(X_test, 1), 1) X_test];
+
+% an array to store the loss at each iteration
+losses = zeros(1, iterations);
+costs = zeros(1, iterations);
+costs_L1 = zeros(1, iterations);
+costs_L2 = zeros(1, iterations);
+
+% convert labels to one hot (1-hot, 0-cold) encoding
+Y_actual = zeros(K,size(Y_train, 1));
+for j = 1:size(Y_train, 1)
+    Y_actual(Y_train(j),j) = 1; 
+end
+
+epsilon = 0.1;
+
+
+accuracies = zeros(iterations,1);
+
+% train model
+
+for i = 1:iterations
+
+    sigmoid = @(s) 1./(1+exp(-s));
+
+    % Accuracy: 0.51667
+    % Accuracy: 0.53889 with W=0.5
+    
+    %Y_predicted = sigmoid(W*X_train'); % predictions
+    
+    % Accuracy: 0.54444
+    Y_predicted = exp(W*X_train'); % predictions
+    Y_predicted = Y_predicted ./ sum(Y_predicted, 1); % normalize (0.1111 without)
+    
+    gradient = ((Y_actual-Y_predicted) * X_train - error_tolerance * W);
+
+    W = W + learning_rate * gradient;
+
+    % test model
+    %Y_model = sigmoid(W*X_test');
+    Y_model = exp(W*X_test'); % predicted probabilities
+    Y_model = Y_model ./ sum(Y_model, 1); % normalize
+    
+    % accuracy
+    [~, Y_prediction] = max(Y_model, [], 1);
+    accuracy = sum(Y_prediction == Y_test') / numel(Y_test);
+    disp(['Accuracy: ', num2str(accuracy)]);
+    accuracies(i) = accuracy;
+
+
+
+    % cross-entropy loss
+    loss = -sum(sum(Y_actual .* log2(Y_predicted)));    % all entropy summed
+    losses(i) = loss;
+
+end
+
+plot_losses(losses);
+
+%function test_model(X_test,Y_prediction,)
+
+%Y_pred_prob = exp(W*X_test'); % predicted probabilities
+%Y_pred_prob = Y_pred_prob ./ sum(Y_pred_prob, 1); % normalize
+
+sigmoid = @(s) 1./(1+exp(-s));
+Y_model = sigmoid(W*X_test');
+
+% accuracy
+[~, Y_prediction] = max(Y_model, [], 1); % argmax
+accuracy = sum(Y_prediction == Y_test) / numel(Y_test);
+disp(['Accuracy: ', num2str(accuracy)]);
+
+
+plot_accuracies(accuracies);
+
+
+function plot_accuracies(accuracies)
+figure;
+% plot data points
+hold on;
+
+plot(accuracies);
+
+xlabel("Iteration");
+ylabel("Accuracy");
+title('Accuracy');
+
+grid on;
+hold off;
+end
+
+function plot_zscores(X,Y)
+figure;
+% plot data points
+
+gscatter(X, Y);
+
+hold on;
+
+xlabel('Z-Score $\frac{x-mean(x)}{std(x)}$', 'interpreter', 'latex');
+ylabel('Folder');
+title('Data Points');
+
+grid on;
+hold off;
+
+
+end
+
+
+function plot_losses(losses)
+figure;
+
+plot(losses);
+
+hold on;
+
+xlabel('Iteration');
+ylabel('Cross-entropy loss');
+title('Loss');
+
+grid on;
+hold off;
+
+end
+
+
+
+
+
+% scratch area ... enter at your on risk ...  ☠️☠️☠️
+%{
+    % Update weights using gradient descent
+    % For L1 regularization
+%%    W = W - (learning_rate * (1/m) * ((Y_pred - Y') * X + lambda * sign(W)));
+    
+    % For L2 regularization
+%%    W = W - (learning_rate * (1/m) * ((Y_pred - Y') * X + lambda * W));
+
+    %cost = -(1/M) * sum(Y_actual .* log(Y_k) + (1 - Y_actual) .* log(1 - Y_k));
+  
+    %cost_L1 = cost + epsilon * sum(abs(W(:,2:end))); % Exclude bias term from regularization
+    %cost_L2 = cost + epsilon * sum(W(:,2:end).^2); % Exclude bias term from regularization
+
+    %costs(i) = cost;
+    %costs_L1(i) = cost_L1;
+    %costs_L2(i) = cost_L2;
+
+
+
+
+
+
+
+
+
+figure;
+% plot data points
+hold on;
+
+plot(accuracies);
+%plot(costs_L1);
+%plot(costs_L2);
+
+
+xlabel("Iteration");
+ylabel("Accuracy");
+title('Accuracy');
+
+grid on;
+hold off;
+
+
+%}
+
