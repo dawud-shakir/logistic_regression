@@ -35,8 +35,6 @@ def dataframe_X_Y():
     df_X.columns = ["X" + str(col+1) for col in df_X.columns]
     
     df = pd.concat([df_X, df_Y], axis=cols)
-
-    #df = pd.concat([df1 := pd.DataFrame({"Y":Y}), pd.DataFrame(X)], axis=cols)#.reindex(df1.index)
     return df
 
 def print_X_Y():
