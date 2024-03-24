@@ -1,22 +1,66 @@
 '''
 Machine Learning
 
-Preprocess audio files for logistic regression.
-
-************** Output at bottom ****
+Process audio files for logistic regression. Prints and writes X and Y to out_file.
 '''
 
 import numpy as np
 import pandas as pd
 import os
 
+from matplotlib import pyplot as plt
+
+
+#dir = os.getcwd() + "/data/test/"
+dir = os.getcwd() + "/data/train/"
+
+X = []  # coefficients
+Y = []  # folder label
+
+
+num_coefficients = 13 
+   
+
+n_mfcc=num_coefficients
+hop_length=512
+win_length=None
+
+out_file = os.getcwd() + f"/mfcc_{n_mfcc}_ids.csv"
+
+
+def dataframe_X_Y():
+    df_Y = pd.DataFrame({"Y":Y})
+    
+    df_X = pd.DataFrame(X)
+    df_X.columns = ["X" + str(col+1) for col in df_X.columns]
+    
+    df = pd.concat([df_X, df_Y], axis=cols)
+
+    #df = pd.concat([df1 := pd.DataFrame({"Y":Y}), pd.DataFrame(X)], axis=cols)#.reindex(df1.index)
+    return df
+
+def print_X_Y():
+    print("printing X and Y...")
+    print(dataframe_X_Y().to_string())
+
+def write_X_Y():
+    print(f"writing X and Y to {out_file}...")
+    dataframe_X_Y().to_csv(out_file, index=False)
+
+
+def read_X_Y(in_file):
+    df = pd.read_csv(in_file)
+    return df.iloc[:,0], df.iloc[:,1:]
+
 
 '''
     > python -m pip install librosa 
     librosa documentation: https://librosa.org/doc/0.10.1/index.html
 '''
-import librosa
 
+
+
+import librosa
 
 from sklearn.preprocessing import OneHotEncoder
 
@@ -51,22 +95,18 @@ print("if time is an issue, set folders=just_two_folders", "\n\n")
 
 
 '''
-This chapter preprocesses the audio files.
-'''
-    
-'''
 Extract coefficients from audio file.
 
 Return a 1-d array. 
 '''
 
-num_coefficients = 40
+n_mfcc=13
 def read_audio_file_mfcc(path) -> np.array:
 
     y, sr = librosa.load(path)
 
     # mfcc_matrix 
-    mfcc_matrix = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=num_coefficients, hop_length=512, win_length=None)
+    mfcc_matrix = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc, hop_length=hop_length, win_length=win_length)
     
 
     # mean of cols
@@ -74,20 +114,15 @@ def read_audio_file_mfcc(path) -> np.array:
     return np.mean(mfcc_matrix, axis=cols)    
 
     
-#dir = os.getcwd() + "/data/test/"
-dir = os.getcwd() + "/data/train/"
-
-X = []  # coefficients
-Y = []  # folder label
 
 '''
 Preprocess audio folders. 
 
 There are 10 folders. Each folder has 90 audio files.
 '''
-print("extracting", num_coefficients, "coefficients from each audio file...")
+print("extracting coefficients from each audio file...\n\n")
 
-for folder in folders:
+for folder_id,folder in enumerate(folders):
     folder_dir = os.path.join(dir, folder) 
     
     if not os.path.isdir(folder_dir):
@@ -100,45 +135,54 @@ for folder in folders:
     files_in_folder = librosa.util.find_files(folder_dir, ext='au', recurse=False)
 
     
-    
+    coefficients_count = 0
     for i in range(len(files_in_folder)):
+        
         coefficients = read_audio_file_mfcc(files_in_folder[i])
-    
+        
         X.append(coefficients)
-            
-        Y.append(folder)
+        coefficients_count += 1
+
+        Y.append(folder_id+1)   #  ids are 1..10
     
 
     print(":"*15, folder, 15*":")
-    print(folder, "has", len(files_in_folder), ".au files")
-    print(folder, "has", len(files_in_folder), "x", len(X[0]), "coefficients")
+    print(f"folder '{folder}' has {len(files_in_folder)} .au files")
+    print(f"folder '{folder}' has {coefficients_count} x {len(X[0])} coefficients")
 
 
 print()
 
-print(len(X) * len(X[0]), "total coefficients loaded from audio files")
+print(f"{len(X)} by {len(X[0])} ({len(X)*len(X[0])}) total coefficients loaded from audio files")
 
-
-print(pd.DataFrame(X))
-
-print(len(Y), "class labels ('blues', 'classical', 'country', ...) ")
-
-print(pd.DataFrame(Y))
-
+#print(f"{len(Y)} by {len(Y[0])} class labels ('blues', 'classical', 'country', ...)")
 
 print("X's size is ", len(X), " by ", len(X[0]))
 print("Y's size is ", len(Y))
+
+
+write_X_Y()
+
+
+print_X_Y()
+
+
+
+
+exit()
 
 '''
 Standardize
 '''
 X = (X - np.mean(X, axis=rows)) / np.std(X, axis=rows)
 
-print("standardized X", pd.DataFrame(X))
+print("standardized")
+
+print_X_Y()
 
 
 '''
-One Hop Encoding 
+Convert Y to spare matrix (a single 1 per row)
 '''
 
 '''
@@ -249,69 +293,3 @@ Y_pred = clf.predict(X_test)
 accuracy = accuracy_score(Y_test, Y_pred)
 print("RandomForest accuracy:", accuracy)
 
-
-
-
-
-
-
-# all_folders
-'''
-if time is an issue, set folders=just_two_folders
-extracting coefficients from audio file...
-::::::::::::::: blues :::::::::::::::
-blues has 90 .au files
-::::::::::::::: classical :::::::::::::::
-classical has 90 .au files
-::::::::::::::: country :::::::::::::::
-country has 90 .au files
-::::::::::::::: disco :::::::::::::::
-disco has 90 .au files
-::::::::::::::: hiphop :::::::::::::::
-hiphop has 90 .au files
-::::::::::::::: jazz :::::::::::::::
-jazz has 90 .au files
-::::::::::::::: metal :::::::::::::::
-metal has 90 .au files
-::::::::::::::: pop :::::::::::::::
-pop has 90 .au files
-::::::::::::::: reggae :::::::::::::::
-reggae has 90 .au files
-::::::::::::::: rock :::::::::::::::
-rock has 90 .au files
-X is the coefficients matrix from audio file in folder
-Y is the audio folder (blues, classical, country
-X=              0           1          2          3          4          5          6   ...        33        34        35        36        37        38        39
-0   -113.598824  121.570671 -19.162262  42.363941  -6.362266  18.621931 -13.699734  ... -2.999698  4.476317 -0.476855  6.006285 -0.059690 -3.458585 -1.841832
-1   -207.523834  123.985138   8.947020  35.867149   2.909594  21.519472  -8.556513  ... -2.451906  5.834808  3.544988  4.897320 -0.415597 -1.995414 -0.465218
-2    -90.757164  140.440872 -29.084547  31.686693 -13.976547  25.753752 -13.664991  ...  0.493469  0.447271 -4.162672 -4.815749 -6.703234 -4.425333 -0.981519
-3   -199.575134  150.086105   5.663404  26.855278   1.770071  14.232647  -4.827845  ... -3.845604 -2.524410 -4.935610 -5.954977 -6.616996 -6.396001 -1.501189
-4   -160.354172  126.209480 -35.581394  22.139256 -32.473549  10.850701 -23.350071  ... -6.110803 -6.951970 -4.070553 -1.137216 -0.491605 -4.786619 -3.221128
-..          ...         ...        ...        ...        ...        ...        ...  ...       ...       ...       ...       ...       ...       ...       ...
-895 -185.500031   98.925781 -36.442879  44.427540 -17.759830  21.284361 -20.293684  ... -3.955510 -3.703457 -6.930363 -1.700546 -2.314521  0.727262  2.184963
-896 -160.157043   88.741447 -35.476883  47.494301 -12.603620  17.301561 -19.144144  ... -2.667592 -2.553800 -2.767049 -1.134696 -2.076545  0.316649 -2.790205
-897  -42.662823  102.988686 -36.877899  44.516605 -11.996202  25.576914 -22.668953  ...  1.308880  3.513731 -3.199157 -1.240945 -2.604901 -4.466717 -2.298241
-898 -117.974052   84.058403 -50.267879  46.049637 -17.698416  20.855793 -21.641119  ... -2.901361 -1.249006 -3.046344 -1.682882 -2.913632 -0.135997 -0.648021
-899 -156.298126  130.789597 -25.229616  43.485470 -12.138994  25.392202  -7.940168  ... -0.646797 -0.067076  0.996034  0.362248 -4.546776 -4.545654 -3.438572
-
-[900 rows x 40 columns]
-Y=          0
-0    blues
-1    blues
-2    blues
-3    blues
-4    blues
-..     ...
-895   rock
-896   rock
-897   rock
-898   rock
-899   rock
-
-[900 rows x 1 columns]
-X's size is  900  by  40
-Y's size is  900
-SVC accuracy: 0.5166666666666667
-Gaussian Naive Bayes accuracy: 0.4
-RandomForest accuracy: 0.5333333333333333
-'''
