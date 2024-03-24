@@ -202,35 +202,6 @@ Y = np.array(Y)
 
 
 
-
-'''
-Chapter II ... find P(Y_k | X_k, W_k)
-
-class handout
-X = samples
-Y = observations 
-
-
-
-W = ((X**2)-np.mean(X)^2) / np.std(X)**2
-
-X = (X - np.mean(X, axis=rows)) / np.std(X, axis=rows)
-X[:,0] = 1
-
-print(pd.DataFrame(X))
-
-
-    
-c = 1
-for k in np.unique(Y):
-    Y[Y==k] = c
-    c += 1
-
-argmax = -1
-for k in range(len(folders)):
-    pass    
-'''
-
 '''
 Chapter IV. Our logistic regression model versus sklean
 '''
