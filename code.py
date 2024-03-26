@@ -6,12 +6,6 @@ import pandas as pd
 
 from sklearn.preprocessing import OneHotEncoder
 
-
-''' Sorry, this is what I meant about cols/rows, Caleb... '''
-# === before === preprocessing: 
-# each row is a feature (a coeff)
-# axis=1
-
 df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/mfcc_13_labels.csv")
 X = df.iloc[:,:-1].to_numpy()   # columns zero to next to last
 Y = df.iloc[:,-1].to_numpy()    # last column
