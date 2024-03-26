@@ -79,6 +79,8 @@ for i in range(1000):
     # update with gradient
     W = W + 0.001*(np.dot((Y - log_term), Xval) - 0.001*W)     
 
+np.random.seed(0)
+
 # guessing these samples with W:
 test = np.random.randint(low=0, high=899, size=50)
 
