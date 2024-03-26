@@ -50,8 +50,6 @@ print(pd.DataFrame(W))
 X_t = Xval.T                              
 
 for i in range(1000):
-
-    #W_Xt = np.dot(Xval, W.T)    # (X)(W^T)  
     
     W_Xt = np.dot(W,X_t)         # PY = (W)(X')   
 
