@@ -24,7 +24,7 @@ Xval = new_array
 print(pd.DataFrame(Xval))   
 
 '''
-Convert labels ("blues", "classical", ...) to binary arrays.
+convert labels ("blues", "classical", ...) to one-hot vectors: one value=1, rest of values=0
 '''
 
 Y_one_column = Y
