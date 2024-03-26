@@ -70,6 +70,3 @@ for i in range(1000):
     W = W + 0.001*(np.dot((Y - log_term), Xval) - 0.001*W)     
 
    
-
-# Compute P
-#P = np.dot(Y, W_Xt) - log_term  #  size(Y) * size(W_Xt) = (10,900) * (10,900)
