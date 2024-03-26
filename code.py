@@ -1,15 +1,32 @@
+
 # caleb
 # dawud
+
+def label2num(label):
+    classes = {
+        "blues": 1,
+        "classical": 2,
+        "country": 3,
+        "disco": 4,
+        "hiphop": 5,
+        "jazz": 6,
+        "metal": 7,
+        "pop": 8,
+        "reggae": 9,
+        "rock": 10
+    }
+    return classes.get(label, -1)  # return -1 if label is not found
+
 
 import numpy as np
 import pandas as pd
 
-
 from sklearn.preprocessing import OneHotEncoder
 
-df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/mfcc_13_labels.csv")
-X = df.iloc[:,:-1].to_numpy()   # columns zero to next to last
-Y = df.iloc[:,-1].to_numpy()    # last column
+# data preprocessed elsewhere.  .. 
+df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/in/mfcc_13_labels.csv")
+X = df.iloc[:,:-1].to_numpy()   # coefficients 
+Y = df.iloc[:,-1].to_numpy()    # label "blues", "classical"
 
 
 # === after === preprocessing: 
@@ -24,13 +41,13 @@ Xval = new_array
 print(pd.DataFrame(Xval))   
 
 '''
-convert labels ("blues", "classical", ...) to one-hot vectors: one value=1, rest of values=0
+convert labels ("blues", "classical", ...) to binary vectors 
 '''
 
 Y_one_column = Y
 
 Y = OneHotEncoder(sparse_output=False).fit_transform(pd.DataFrame(Y))   # expects a 2-D container, not a 1-D series
-Y = Y.T # to make size(Y)=(k,m)=(10,900)
+Y = Y.T # to make size(Y) = (k,m) = (10, 900)
 print(Y)
 
 
@@ -41,7 +58,7 @@ print("Y's shape", Y.shape)
 
 
 #initializing weights matrix
-rows, cols = 10, 14
+rows, cols = 10, 14     # k,m
 W = np.random.normal(0, 1, (rows, cols)) 
 print(pd.DataFrame(W))
 
@@ -62,4 +79,21 @@ for i in range(1000):
     # update with gradient
     W = W + 0.001*(np.dot((Y - log_term), Xval) - 0.001*W)     
 
-   
+# guessing these samples with W:
+test = np.random.randint(low=0, high=899, size=50)
+
+ 
+X_test = Xval[test]   # already standardized
+
+y_predict = 1 / (1 + np.exp( np.dot( X_test, W.T ) ))
+y_predict = np.argmax(y_predict, axis=1)
+
+y_test = Y_one_column[test]
+y_test = list(map(label2num,y_test))
+
+accuracy = sum(y_predict==y_test) / len(y_test)
+
+print("accuracy: ", accuracy)
+
+
+
