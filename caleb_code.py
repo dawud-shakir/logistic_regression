@@ -53,18 +53,23 @@ print(pd.DataFrame(W))
 '''W.shape=[K,N+1], X.shape=[M,N+1], Y.shape=[K,M]'''
 
 X_t = Xval.T                              
-#W_Xt = np.dot(Xval, W.T)    # (X)(W^T)  
-W_Xt = np.dot(W,X_t)         # (W)(X^T)   
 
+for i in range(1000):
 
-exp_W_Xt = np.exp(W_Xt)
-log_term = np.log(1 + exp_W_Xt)
+    #W_Xt = np.dot(Xval, W.T)    # (X)(W^T)  
+    
+    W_Xt = np.dot(W,X_t)         # PY = (W)(X')   
 
-# W_Xt = PY_X
-# W_new = W + (Y - PY_X)*X
+    print(i)
+    #print(pd.DataFrame(W_Xt))
+    
+    exp_W_Xt = np.exp(W_Xt)
+    log_term = np.log(1 + exp_W_Xt)
 
-print(np.shape(np.dot(Y-W_Xt, X))) 
-print(np.shape(log_term))
+    # update with gradient
+    W = W + 0.001*(np.dot((Y - log_term), Xval) - 0.001*W)     
+
+   
 
 # Compute P
 #P = np.dot(Y, W_Xt) - log_term  #  size(Y) * size(W_Xt) = (10,900) * (10,900)
