@@ -1,9 +1,18 @@
 import numpy as np
-from sklearn.decomposition import PCA
+import pandas as pd
+
 import matplotlib.pyplot as plt
 
-# Sample data
-data = np.random.randn(100, 3) # Example 100 samples with 3 features
+from sklearn.decomposition import PCA
+
+# data preprocessed elsewhere.  .. 
+df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/in/mfcc_13_labels.csv")
+X = df.iloc[:,:-1].to_numpy()   # coefficients 
+Y = df.iloc[:,-1].to_numpy()    # label "blues", "classical"
+
+
+
+data = X
 
 # Perform PCA
 pca = PCA()
@@ -18,17 +27,23 @@ score = pca.transform(data)
 # Eigenvalues of the covariance matrix
 latent = pca.explained_variance_
 
-# Percentage of variance explained by each principal component
+# Percentage of variance "explained" by each principal component
 explained = pca.explained_variance_ratio_ * 100
+
+
+
+# Plot first two principal components
+plt.scatter(x=score[:, 0], y=score[:, 1], alpha=0.5)
+plt.xlabel('PC1')
+plt.ylabel('PC2')
+plt.draw()
+
+plt.show()
+
 
 # Plot percentage of variance explained
 plt.bar(range(1, len(explained) + 1), explained)
 plt.xlabel('Principal Component')
 plt.ylabel('Variance Explained (%)')
-plt.show()
-
-# Plot first two principal components
-plt.scatter(score[:, 0], score[:, 1])
-plt.xlabel('PC1')
-plt.ylabel('PC2')
+plt.draw()
 plt.show()
