@@ -11,5 +11,5 @@ def num2label(number):
         9: "reggae",
         10: "rock"
     }
-    return classes.get(number, "Unknown") # return "Unknown" if number not found
+    return classes.get(number, "not found") # return "not found" if number not found
 
