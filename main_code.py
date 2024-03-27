@@ -1,6 +1,4 @@
-
-# caleb
-# dawud
+# demo
 
 def label2num(label):
     classes = {
