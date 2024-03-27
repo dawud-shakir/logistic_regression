@@ -8,9 +8,6 @@ from sklearn.decomposition import PCA
 # data preprocessed elsewhere.  .. 
 df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/in/mfcc_13_labels.csv")
 X = df.iloc[:,:-1].to_numpy()   # coefficients 
-Y = df.iloc[:,-1].to_numpy()    # label "blues", "classical"
-
-
 
 data = X
 
