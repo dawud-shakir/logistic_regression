@@ -1,3 +1,6 @@
+% logistic regression with (and without) pca
+
+
 %clc;
 clearvars;
 close all;
@@ -16,32 +19,36 @@ sim.iterations = 100
 
 sim.train_ratio = 0.80
 
-
-
-
-% added
-
-sim.with_pca = 1 % 1=yes, 0=no
-
-for pca_count = 1:13
-
-
-sim.pca_count = pca_count;
-
+% without pca
+sim.with_pca = 0
 [~,accuracies] = train_and_test(sim);
 
 hold on
-    subplot(4,4,pca_count)
-    if sim.with_pca==1
-        with_pca_title = ["Accuracy (with PCA)" num2str(sim.pca_count)];
-        plot(accuracies), title(with_pca_title), xlabel('Iteration'), xlim([0,sim.iterations]), ylim([0,1])
-    else
-        plot(accuracies), title("Accuracy (without PCA)"), xlabel('Iteration'), xlim([0,sim.iterations]), ylim([0,1])
-    
-    end
+        subplot(4,4,1)
+
+    plot(accuracies), title("Accuracy (without PCA)"), xlabel('Iteration'), xlim([0,sim.iterations]), ylim([0,1])
 hold off
 
+% with pca
+sim.with_pca = 1
+
+for pca_count = 1:13
+    sim.pca_count = pca_count;
+    [~,accuracies] = train_and_test(sim);
+    
+    hold on
+        subplot(4,4,1+pca_count)
+        if sim.with_pca==1
+            with_pca_title = ["Accuracy (with PCA)" num2str(sim.pca_count)];
+            plot(accuracies), title(with_pca_title), xlabel('Iteration'), xlim([0,sim.iterations]), ylim([0,1])
+        else
+            plot(accuracies), title("Accuracy (without PCA)"), xlabel('Iteration'), xlim([0,sim.iterations]), ylim([0,1])
+        
+        end
+    hold off
+
 end
+
 
 
 function [W, accuracies, losses] = train_and_test(sim)
@@ -109,39 +116,27 @@ for i = 1:num_samples
 end
 
 
+% column of ones
+X = [ones(num_samples, 1) X];
 
 
 
 
-  
-
-
-    % column of ones
-    X = [ones(num_samples, 1) X];
-
-
-
-    
-
-    
-    
-    
     % split data into training and testing sets
-   % [X_train, X_test, Y_train, Y_test] = train_test_split(X, Y, sim.train_ratio);
-
-num_train = round(sim.train_ratio * num_samples);
-
-% Randomly shuffle indices without replacement
-%indices = randperm(size(X, 1));
-
-% Randomly shuffle indices with replacement
-indices = randi(size(X, 1), 1, size(X, 1));
     
-% Split
-X_train = X(indices(1:num_train), :);
-X_test = X(indices(num_train+1:end), :);
-Y_train = Y(:,indices(1:num_train));
-Y_test = Y(:,indices(num_train+1:end));             
+    num_train = round(sim.train_ratio * num_samples);
+    
+    % Randomly shuffle indices without replacement
+    %indices = randperm(size(X, 1));
+    
+    % Randomly shuffle indices with replacement
+    indices = randi(size(X, 1), 1, size(X, 1));
+        
+    % Split
+    X_train = X(indices(1:num_train), :);
+    X_test = X(indices(num_train+1:end), :);
+    Y_train = Y(:,indices(1:num_train));
+    Y_test = Y(:,indices(num_train+1:end));             
 
 W = rand(num_labels, size(X_train, 2));    % random gives a 0.01 accuracy increase
 
