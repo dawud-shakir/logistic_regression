@@ -1,0 +1,278 @@
+# demo
+'''
+Machine Learning
+
+Preprocess audio files for logistic regression.
+
+'''
+
+import numpy as np
+import pandas as pd
+import os
+
+
+'''
+    > python -m pip install librosa 
+    librosa documentation: https://librosa.org/doc/0.10.1/index.html
+'''
+import librosa
+
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+
+
+
+
+
+'''
+These folders are our classes. 
+'''
+all_folders = [
+    "blues",
+    "classical",
+    "country",
+    "disco",
+    "hiphop",
+    "jazz",
+    "metal",
+    "pop",
+    "reggae",
+    "rock"
+]
+
+just_two_folders = [
+    "blues",
+    "classical"
+]
+
+
+folders = all_folders
+    
+'''
+Extract coefficients from audio file.
+
+Return a 1-d array. 
+
+Each column in the 1-d array is the mean of coefficients at that time step. 
+
+
+n_coefficients: number of coefficients 
+
+n_samples_in_frame: number of samples in a frame (hop length)
+
+frame_length: the length of each frame (win_length) 
+
+'''
+
+def read_audio_file_mfcc(path, n_coefficients=10, n_samples_in_frame=512, frame_length=None) -> np.array:
+
+    y, sr = librosa.load(path)
+
+    mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_coefficients, hop_length=n_samples_in_frame, win_length=frame_length)
+
+    # mean of rows
+    return np.mean(mfccs, axis=1)   
+
+    
+#dir = os.getcwd() + "/data/test/"
+dir = os.getcwd() + "/data/train/"
+
+X = []  # coefficients
+Y = []  # folder label
+
+'''
+Preprocess audio folders. 
+
+There are 10 folders. Each folder has 90 audio files.
+'''
+print("extracting coefficients from audio file...")
+
+for c in folders:
+    folder_dir = os.path.join(dir, c) 
+    
+    if not os.path.isdir(folder_dir):
+        exit(f"{dir} missing folder \"{c}\"")
+
+
+    '''
+    Find audio files for folder k. 
+    '''
+    files_in_folder = librosa.util.find_files(folder_dir, ext='au', recurse=False)
+
+    mfcc_lengths = []
+
+    for i in range(len(files_in_folder)):
+        mfccs = read_audio_file_mfcc(files_in_folder[i])
+
+        X.append(mfccs)
+        Y.append(c)
+    
+        mfcc_lengths.append(len(mfccs))
+    
+    print(":"*15, c, 15*":")
+    print(c, "has", len(files_in_folder), ".au files")
+    
+#    print(c, "has", len(mfcc_lengths), "mfccs")
+#    print("min mfcc length: ", pd.Series(mfcc_lengths).min())
+#    print("max mfcc length: ", pd.Series(mfcc_lengths).max())
+
+
+print('X is the coefficients matrix from audio file in folder')
+print('Y is the audio folder (blues, classical, country')
+'''
+Truncate X because some audio files are longer than others.
+'''
+column_lengths = [len(row) for row in X]
+min_length = np.min(column_lengths) 
+for i in range(len(X)):
+    X[i] = X[i][0:min_length]
+
+
+
+X = np.array(X)
+Y = np.array(Y)
+
+
+
+print(pd.DataFrame(X))
+print(pd.DataFrame(Y))
+
+
+
+
+'logistic regression classifier'
+
+def label2num(label):
+    classes = {
+        "blues": 1,
+        "classical": 2,
+        "country": 3,
+        "disco": 4,
+        "hiphop": 5,
+        "jazz": 6,
+        "metal": 7,
+        "pop": 8,
+        "reggae": 9,
+        "rock": 10
+    }
+    return classes.get(label, -1)  # return -1 if label is not found
+
+
+
+
+''''
+df = pd.read_csv("https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/in/mfcc_13_labels.csv")
+X = df.iloc[:,:-1].to_numpy()   # coefficients 
+Y = df.iloc[:,-1].to_numpy()    # label "blues", "classical"
+'''
+
+
+X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+print("X's size is ", X.shape)
+print("Y's size is ", Y.shape)  
+x_train, X_tst, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=30)
+
+
+
+
+# === after === preprocessing: 
+# each column is a feature (a coeff)
+# use axis=0     
+
+ones_column = np.ones((x_train.shape[0], 1))
+new_array = np.hstack((ones_column, x_train))
+Xval = new_array
+
+#print(pd.DataFrame(X))   
+
+'''
+convert labels ("blues", "classical", ...) to binary vectors 
+'''
+
+Y_one_column = y_train
+
+y_train = OneHotEncoder(sparse_output=False).fit_transform(pd.DataFrame(y_train))   # expects a 2-D container, not a 1-D series
+y_train = y_train.T # to make size(Y) = (k,m) = (10, 720)
+print(y_train)
+
+
+#print(pd.DataFrame(Y))
+
+print("X's shape", Xval.shape)
+print("Y's shape", y_train.shape)
+
+
+#initializing weights matrix
+rows, cols = 10, 11     # k,m
+W = np.random.normal(0, 1, (rows, cols)) 
+print(pd.DataFrame(W))
+
+'''W.shape=[K,N+1], X.shape=[M,N+1], Y.shape=[K,M]'''
+
+X_t = Xval.T                              
+'''
+for i in range(1500):
+    
+    W_Xt = np.dot(W, X_t)         # PY = (W)(X')   
+
+    #print(i)
+    #print(pd.DataFrame(W_Xt))
+    
+    exp_W_Xt = np.exp(W_Xt)
+    log_term = np.log(1 + exp_W_Xt)
+    W0 = np.hstack((W[:,0][:, np.newaxis], np.zeros((10, 719))))
+    #P2 = np.dot(Y, exp_W_Xt.T) - log_term
+
+    P1 = (np.exp(W0 + W_Xt))/(1+np.exp(W0 + W_Xt))
+
+    # update with gradient
+    W = W + 0.001*(np.dot((y_train - P1), Xval) - 0.0001*W)     
+
+'''
+threshold = 1e-6  # Convergence threshold
+max_iterations = 2500  # Maximum number of iterations
+learning_rate = 0.01  # Learning rate
+regularization_strength = 0.00001  # Regularization strength
+
+for i in range(max_iterations):
+    W_Xt = np.dot(W, X_t)
+    W0 = np.hstack((W[:,0][:, np.newaxis], np.zeros((10, 719))))
+    P1 = (np.exp(W0 + W_Xt)) / (1 + np.exp(W0 + W_Xt))
+    gradient = np.dot((y_train - P1), Xval) - regularization_strength * W
+    W_new = W + learning_rate * gradient
+    
+    # Check for convergence
+    if np.linalg.norm(W_new - W) < threshold:
+        print(f'Convergence reached after {i+1} iterations.')
+        break
+    
+    W = W_new
+else:
+    print('Maximum iterations reached without convergence.')
+
+np.random.seed(0)
+
+# guessing these samples with W:
+#test = np.random.randint(low=0, high=899, size=50)
+
+ 
+#X_test = Xval[test]   # already standardized
+
+onee_column = np.ones((X_tst.shape[0], 1))
+neww_array = np.hstack((onee_column, X_tst))
+Xvall = neww_array
+
+y_predict = 1 / (1 + np.exp( np.dot( Xvall, W.T ) ))
+y_predict = np.argmax(y_predict, axis=1)
+
+#Y_test = Y_one_column[test]
+y_test = list(map(label2num,y_test))
+
+accuracy = sum(y_predict==y_test) / len(y_test)
+
+print("accuracy: ", accuracy)
+print('The end')
+
+
+
+
