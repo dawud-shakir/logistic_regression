@@ -1,0 +1,482 @@
+clc;
+close all;
+clearvars, warning "clearvars";
+
+root_path = "https://raw.githubusercontent.com/dawud-shakir/logistic_regression/main/in/";
+
+
+
+sim.test_kaggle = 0;     % finish with kaggle test and submission
+
+sim.num_coeffs = 13;
+sim.csv_in = root_path + "mfcc_" + num2str(sim.num_coeffs) + "_labels.csv";
+
+% ignored if sim.test_kaggle = 0
+sim.kaggle_test_file = root_path + "kaggle_mfcc_" + num2str(sim.num_coeffs) + ".csv";   
+
+sim.csv_out = "kaggle_" + num2str(sim.num_coeffs) + "_sig.csv";
+
+
+
+% plot losses
+sim.plot.plot_loss = 0;
+     
+% plot principle components
+sim.plot.plot_pcs = 1;
+
+% plot convergence time
+sim.plot.plot_convergence = 0;
+
+% mfcc classes
+sim.labels = {'blues', 'classical', 'country', 'disco', 'hiphop', ...
+          'jazz', 'metal', 'pop', 'reggae', 'rock'};
+
+
+
+accuracies = [];    
+losses = [];
+
+
+sim.total_runs = sim.num_coeffs;
+
+for i = 0:sim.total_runs     % one run per pc + 1
+    
+    
+    old_seed = rng(0); % same seed for each run
+
+    % hyper-params
+    
+    sim.penalty = 0.001;
+    sim.learning_rate = 0.001;
+    
+    sim.iterations = 100;           
+   
+    sim.with_softmax = 1;
+    sim.with_sigmoid = 1;
+    
+    sim.num_pcs = 5;
+    sim.pca_capture = 99.9;
+    sim.pca_count = i;   % analysis with this many pcs
+
+
+    % sampling
+    % k-fold
+    sim.sampling.k_fold = 1;
+    sim.num_samples = 900;
+    sim.num_folds = 5;  % floor(sqrt(sim.num_samples));   % sqrt(900) = 30 folds   
+    sim.num_per_fold = floor(sim.num_samples / sim.num_folds);
+    
+    % train-and-validate (test-and-train on python)
+    sim.train_ratio = 0.80;
+    sim.test_ratio = 1-sim.train_ratio;
+    sim.sampling.with_replacement = 1; %
+
+
+    sim  % show
+
+
+    % logistic regression: Go!
+    
+    old_seed = rng(0); % same seed for each run
+    sim.with_softmax = 0; %%% use sigmoid
+    [acc_sigmoid, W_sigmoid, pca_coeffs] = train_and_validate(sim.csv_in, sim);
+
+
+    old_seed = rng(0); % same seed for each run
+    sim.with_softmax = 1; %%% use softmax
+    [acc_softmax, W_softmax, pca_coeffs] = train_and_validate(sim.csv_in, sim);
+
+
+
+
+
+
+    if sim.test_kaggle == 1
+        sim.method = "soft";
+
+    
+
+        if sim.method == "soft"
+            kaggle_test(W_softmax, sim) 
+
+        elseif sim.method == "sigmoid" 
+            kaggle_test(W_sigmoid, sim) 
+        end
+    end
+
+
+
+    figure;
+    
+    hold on;
+    
+    plot(acc_sigmoid, "r", 'LineWidth', 1);
+    plot(acc_softmax, "b", 'LineWidth', 1);
+    title("$\texttt{K-Fold Cross-Validation}$", "Interpreter", "latex");
+    xlabel("$\texttt{Fold}$", "Interpreter", "latex");
+    ylabel("$\texttt{Accuracy}$", "Interpreter", "latex");
+
+    ylabel("Accuracy");
+    ylim([0,1]);
+    grid on;
+    legend("$\texttt{sigmoid}$", "$\texttt{softmax}$", "Interpreter", "latex")
+    hold off;
+
+
+
+end
+
+
+function [accuracies, W, pca_coeffs] = train_and_validate(csv, sim)
+% Trains and validates our logistic regression model
+%
+% Inputs:
+%   csv: Path to X,Y file with MFCC data
+%   sim: Structure with simulation parameters (see below)
+%
+% Outputs:
+%   accuracies: Array of accuracies for each fold of cross-validation
+%   W: Trained coefficients of our logistic regression model
+%   pca_coeffs: Principal components used for PCA (empty if num_pcs is 0)
+%
+% Hyper-Parameters:
+%   sim.labels: Array of class labels
+%   sim.num_pcs: Number of principal components for PCA
+%   sim.k_folds: Number of folds for cross-validation
+%   sim.pca_capture: Variance captured by PCA (if num_pcs > 0)
+%   sim.iterations: Number of iterations for training the model
+%   sim.learning_rate: Learning rate for gradient descent
+%   sim.penalty: Regularization penalty for logistic regression
+%   sim.softmax: Use softmax function instead of sigmoid (true/false)
+%
+% Example:
+%   [accuracies, W, pca_coeffs] = LogReg_training_and_validation('train.csv', sim);
+
+
+% default value
+use_all_coeffs = 1;
+
+labels = sim.labels;
+num_pcs = sim.num_pcs;
+pca_capture = sim.pca_capture;
+with_softmax = sim.with_softmax;
+
+% load training data
+table = readtable(csv);
+
+if use_all_coeffs == 1    % all coeffs
+    X = table2array(table(:, 1:end-1));
+    Y_labels = table2array(table(:, end));      % last column
+end
+
+% Principle Component Analysis
+if num_pcs == 0
+    pca_coeffs = [];    % pca coeffs to return
+else
+    % [~, ~, ~, ~, variance_ratios_explained, ~] = pca(X);
+    % cumulative = cumsum(variance_ratios_explained);
+    % [~, g] = max(cumulative >= pca_capture, [], 1);
+    % 
+    % % this many PCs for capture
+    % g = g + 1;
+    % 
+    % % Perform PCA
+    % pca_coeffs = pca(X); % descending order
+    % pca_coeffs = pca_coeffs(:, 1:g);    % trim
+    % X = X * pca_coeffs;
+
+
+
+
+    % From-scratch PCA 
+    % Same results as matlab's pca!
+    
+    
+    
+    
+        % 1. Center columns
+        X_centered = X - mean(X, 1); 
+        
+        % 2. Build covariance matrix
+        cov_mat = cov(X_centered); % 13 x 13
+        
+        % 3. Eigenvectors and eigenvalues
+        [eig_vecs, eig_vals] = eig(cov_mat);
+        
+        % 4. Sort eigenvectors highest to lowest
+        [~,idx] = sort(diag(eig_vals), 'descend');
+        eig_vecs_sorted = eig_vecs(:,idx);
+        
+        % 5. Project centered points onto k eigens 
+        g = num_pcs; % explain this much variance
+        pca_coeffs = eig_vecs_sorted(:, 1:g); % return this 
+
+        X_reduced = X_centered * pca_coeffs;
+        
+        % 6. Back to X
+        X = X_reduced;
+
+end
+
+% standardize features 
+X = (X-mean(X,1))./std(X,1);    % zscore
+
+% one hot encode labels
+num_labels = size(unique(Y_labels), 1);
+num_samples = size(Y_labels, 1);
+
+% 1-hot encode
+Y = zeros(num_labels, num_samples);
+for i = 1:num_samples
+    Y(strcmp(labels, Y_labels{i}), i) = 1;
+end
+
+% column of ones for bias
+X = [ones(num_samples, 1) X];
+
+
+
+
+% random coefficients
+W = rand(num_labels, size(X,2));
+W(:,1) = 0;  % bias
+
+
+% k-fold validation pits k folds against each other
+ 
+[subsets,num_per_fold] = k_folds(X, Y, sim);   % subsets is a struct
+
+accuracies = zeros(num_per_fold, 1);
+
+
+
+
+if  sim.sampling.k_fold == 1
+    
+
+    num_folds = sim.num_folds;
+
+    for fold = 1:num_folds
+        % subset i fold to validate
+        X_validate = subsets(fold).X;
+        Y_validate = subsets(fold).Y;
+    
+        % every subset except i fold to test
+        X_train = [];
+        Y_train = [];
+    
+        for j = 1:numel(subsets)
+            if j == fold
+                continue
+            end
+            X_train = [X_train; subsets(j).X];
+            Y_train = [Y_train, subsets(j).Y];
+        end
+    
+        % train model using softmax or sigmoid
+        for j = 1:sim.iterations
+            if with_softmax == 1
+                PY = softmax(W * X_train');
+                W = W + sim.learning_rate * ((Y_train - PY) * X_train - sim.penalty * W);
+            else
+                PY = sigmoid(W * X_train');
+                W = W + sim.learning_rate * ((Y_train - PY) * X_train - sim.penalty * W);
+            end
+        end
+    
+        %%% validate model
+        if with_softmax
+            Y_predict = softmax(W * X_validate');   % multi-class
+        else
+            Y_predict = sigmoid(W * X_validate');   % binary
+        end
+    
+    
+    
+        [~, argmax] = max(Y_predict, [], 1);
+    
+    
+    
+    
+        score = 0;
+        for j = 1:size(Y_validate, 2)
+            if Y_validate(argmax(j), j) == 1
+                score = score + 1;
+            end
+          
+        end
+        
+        accuracy = score / size(Y_validate, 2);
+    
+        accuracies(fold) = accuracy;
+    end
+end
+
+end
+
+
+
+
+function [subsets,num_folds] = k_folds(X, Y, sim)
+
+% split data into folds
+    
+    
+    without_replacement =     sim.sampling.with_replacement;
+    
+    num_samples = sim.num_samples
+    num_per_fold = sim.num_per_fold;
+    num_folds = sim.num_folds ;
+
+    subsets = struct("X", [], "Y", []);
+
+    % choose folds randomly with replacement
+    for k = 1:num_folds
+        
+        if  nargin==4 && varargin(4) == 1
+            % without replacement
+            indicies = randperm(num_samples, num_per_fold);
+            
+        else
+            % with replacement
+            indicies = randi(num_samples, 1, num_per_fold);
+    
+        end
+            
+    
+        subsets(k).X = X(indicies, :);
+        subsets(k).Y = Y(:, indicies);
+    end
+end
+
+
+
+function [subsets,num_per_fold] = train_validate_split(X, Y, sim)
+
+    % split data into train and validate sets
+    %assert(size(X,1)==size(Y,2))
+    
+    without_replacement = sim.sampling.without_replacement;
+    
+    num_samples = sim.num_samples;
+    
+    % split data into training and testing sets
+    num_train = round(sim.train_ratio * num_samples);
+    
+    if without_replacement
+        % randomly shuffle indices without repetitions (without replacement) 
+        indices = randperm(num_samples);
+    
+    else
+       % randomly shuffle indices with repetitions (with replacement)
+        indices = randi(num_samples, 1, num_samples);
+    
+    end
+    
+    % split
+    
+    X_train = X(indices(1:num_train), :);
+    X_validate = X(indices(num_train+1:end), :);
+    Y_train = Y(:,indices(1:num_train));
+    Y_validate = Y(:,indices(num_train+1:end));             
+
+
+
+    subsets = struct("X_train", X_train, "Y_train", Y_train, "X_validate", X_validate, "Y_validate", Y_validate);
+
+
+    
+    subsets(k).X = X(indicies, :);
+    subsets(k).Y = Y(:, indicies);
+end
+
+
+function P = softmax(X)
+% Softmax probabilities for each row of matrix X
+%
+% Inputs:
+%   X: Input matrix (N x M)
+%
+% Outputs:
+%   P: Softmax matrix (N x M)
+%
+% Example:
+%   P = softmax([1 2; 3 4; 5 6]);
+
+% Avoid numerical overflow by subtracting maximum value from each element
+row_max = max(X, [], 2);  % Max of each row
+row_exp = exp(X - row_max); % Subtract the max of each row
+
+P = row_exp ./ sum(row_exp, 2); % Find softmax probabilities for each row
+end
+
+
+function P = sigmoid(X)
+% Apply sigmoid to each --element-- of matrix X
+%
+% Inputs:
+%   X: Input matrix (K x N)
+%
+% Outputs:
+%   S: Sigmoid matrix (K x N)
+%
+% Usage:
+%   S = sigmoid([1 2; 3 4; 5 6]);
+
+P = 1 ./ (1 + exp(-X));
+
+end
+
+
+
+
+function kaggle_test(W, sim) 
+    
+    % test model and output kaggle file
+    
+    df = readtable(sim.kaggle_test_file);
+    
+    
+    
+    
+    % split data into features (X) and labels (Y)
+    X_test = table2array(df(:, 1:end));
+    % standardize features
+    X_test = (X_test-mean(X_test)) ./ std(X_test);  % zscore
+    % add column of ones
+    X_test = [ones(size(X_test, 1), 1) X_test];   
+    
+    
+    if sim.with_softmax == 1
+        Y_test = softmax(W * X_test');
+    
+    else
+        Y_test = sigmoid(W * X_test');
+    end
+    [~, Y_test] = max(Y_test, [], 1);   % row max
+
+
+    
+    column_class = cell(numel(Y_test, 2));
+    column_id = {dir("../data/test/*.au").name};
+    
+    for i = 1:size(Y_test,2)
+        
+        column_class{i} = sim.labels(Y_test(i));
+    
+    end
+    
+    
+    
+    
+    T = table(column_id', column_class', 'VariableNames', {'id', 'class'});
+    
+    csv_out = sim.csv_out;
+    %if exist(csv_out, 'file') == 2
+    %    error('%s already exists!', csv_out);
+    %else
+    %    disp(['outfile: ', csv_out])
+        writetable(T, csv_out)
+    %end
+
+end
