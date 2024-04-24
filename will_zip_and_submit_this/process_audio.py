@@ -88,6 +88,8 @@ for file_path in audio_paths:
 X_out = X
 Y_out = Y
 
+pd.DataFrame(X,Y).to_csv()
+
 # Convert list to bytes
 bytes_data = pickle.dumps((X_out,Y_out)) # 662_390_923 bytes
 
